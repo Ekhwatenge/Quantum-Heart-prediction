@@ -1,0 +1,224 @@
+---
+title: "Quantum Heart Prediction"
+author: "Elvira Khwatenge"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an analysis of a heart disease prediction dataset. The goal is to explore the data, build a predictive model, and evaluate its performance.
+
+## Data Loading and Preprocessing
+
+First, we load the necessary libraries and read the data.
+
+```{r}
+library(tidyverse)
+library(caret)
+
+data <- read.csv("Heart Prediction Quantum Dataset.csv")
+head(data)
+str(data)
+sum(is.na(data))
+```
+
+## Data Processing
+
+preprocess the data by converting categorical variables to factors, checking for outliers, and scaling numerical features.
+
+```{r}
+data$Gender <- as.factor(data$Gender)
+data$HeartDisease <- as.factor(data$HeartDisease)
+
+summary(data)
+
+boxplot(data$Age, main="Age",col="orange", border="black")
+boxplot(data$BloodPressure, main="BloodPressure",col="violet", border="black")
+boxplot(data$Cholesterol, main="Cholesterol",col="navy", border="black")
+boxplot(data$HeartRate, main="HeartRate",col="red", border="black")
+boxplot(data$QuantumPatternFeature, main="QuantumPatternFeature",col="brown", border="black")
+
+Q1 <- quantile(data$Cholesterol, 0.25)
+Q3 <- quantile(data$Cholesterol, 0.75)
+IQR <- Q3 - Q1
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+
+data <- data[data$Cholesterol >= lower_bound & data$Cholesterol <= upper_bound, ]
+
+numerical_features <- c("Age", "BloodPressure", "Cholesterol", "HeartRate", "QuantumPatternFeature")
+data[numerical_features] <- scale(data[numerical_features])
+
+head(data)
+```
+
+###Exploratory Data Analysis (EDA)
+
+perform EDA to understand the relationships between variables.
+
+```{r}
+hist(data$Age, main="Age Distribution", xlab="Age", col="skyblue", border="white")
+hist(data$BloodPressure, main="Blood Pressure Distribution", xlab="Blood Pressure", col="lightgreen", border="white")
+hist(data$Cholesterol, main="Cholesterol Distribution", xlab="Cholesterol", col="lightcoral", border="white")
+hist(data$HeartRate, main="Heart Rate Distribution", xlab="Heart Rate", col="lightgoldenrod", border="white")
+hist(data$QuantumPatternFeature, main="Quantum Pattern Feature Distribution", xlab="Quantum Pattern Feature", col="lavender", border="white")
+
+# Bar plots with colors
+plot(data$Gender, main="Gender Distribution", ylab="Frequency", col=c("pink", "lightblue"))
+plot(data$HeartDisease, main="Heart Disease Distribution", ylab="Frequency", col=c("lightgreen", "salmon"))
+
+# Scatter plots with colors
+plot(data$Age, data$HeartDisease, main="Age vs Heart Disease", xlab="Age", ylab="Heart Disease", col=ifelse(data$HeartDisease == 1, "red", "blue"), pch=19)
+plot(data$BloodPressure, data$HeartDisease, main="Blood Pressure vs Heart Disease", xlab="Blood Pressure", ylab="Heart Disease", col=ifelse(data$HeartDisease == 1, "red", "blue"), pch=19)
+plot(data$Cholesterol, data$HeartDisease, main="Cholesterol vs Heart Disease", xlab="Cholesterol", ylab="Heart Disease", col=ifelse(data$HeartDisease == 1, "red", "blue"), pch=19)
+plot(data$HeartRate, data$HeartDisease, main="Heart Rate vs Heart Disease", xlab="Heart Rate", ylab="Heart Disease", col=ifelse(data$HeartDisease == 1, "red", "blue"), pch=19)
+plot(data$QuantumPatternFeature, data$HeartDisease, main="Quantum Pattern Feature vs Heart Disease", xlab="Quantum Pattern Feature", ylab="Heart Disease", col=ifelse(data$HeartDisease == 1, "red", "blue"), pch=19)
+
+# Select numeric columns and handle missing values
+numerical_features <- c("Age", "BloodPressure", "Cholesterol", "HeartRate", "QuantumPatternFeature")
+numeric_data <- data[, numerical_features]
+numeric_data <- na.omit(numeric_data)
+
+# Remove columns with zero variance (if any)
+numeric_data <- numeric_data[, apply(numeric_data, 2, var) != 0]
+
+# Compute correlation matrix
+correlation_matrix <- cor(numeric_data, use = "complete.obs")
+
+# Visualize with corrplot
+library(corrplot)
+corrplot(correlation_matrix, method = "color", type = "upper", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+
+
+
+```
+
+
+###  Model Building 
+Build a logistic regression model to predict heart disease
+
+
+```{r}
+set.seed(123)
+train_index <- createDataPartition(data$HeartDisease, p = 0.7, list = FALSE)
+train_data <- data[train_index, ]
+test_data <- data[-train_index, ]
+
+# Train the logistic regression model
+model <- glm(HeartDisease ~ ., data = train_data, family = "binomial")
+
+# Summarize the model
+summary(model)
+
+# Make predictions on the test data
+predictions <- predict(model, newdata = test_data, type = "response")
+predicted_classes <- ifelse(predictions > 0.5, 1, 0)
+
+# Evaluate the model
+confusionMatrix(as.factor(predicted_classes), test_data$HeartDisease)
+```
+
+
+# Discussion and Interpretation
+
+## Data Summary and Preprocessing
+At the Initial Data Inspection the dataset consisted of 500 observations with 7 variables, including Age, Gender, BloodPressure, Cholesterol, HeartRate, QuantumPatternFeature, and HeartDisease. No missing values were detected.
+
+During Data Type Conversion the Gender and HeartDisease variables were converted to factor variables for appropriate analysis.
+
+Outliers in the Cholesterol variable were removed to ensure data quality.
+
+Numerical features were scaled to standardize their ranges for model performance.
+
+## Exploratory Data Analysis (EDA)
+### Histograms
+
+The age histogram shows a relatively normal distribution of ages, with a slight right skew, indicating a higher proportion of middle-aged and older individuals.
+
+The bimodal blood pressure distribution suggests two distinct groups, possibly representing normal and high blood pressure populations.
+
+The right-skewed distribution indicates that most individuals have normal cholesterol levels, but a notable subset has higher levels.
+
+The normal distribution indicates that most individuals have heart rates within the typical range.
+
+Quantum Pattern Feature/multimodal Distribution suggests distinct subgroups within the population relevant to heart disease prediction.
+
+### Bar Plots
+
+The distribution of males and females in the dataset is critical for understanding potential gender-based risk differences.
+
+Heart Disease Distribution Illustrates the prevalence of heart disease in the sample, providing insight into the overall burden of the disease.
+
+Scatter plots of Age, BloodPressure, Cholesterol, HeartRate, and QuantumPatternFeature versus HeartDisease use color-coding to visualize relationships. Patterns or clusters reveal risk factors or predictive indicators.
+
+Correlation Matrix- heatmap visualizes correlations between numerical features, with stronger correlations indicating potential multicollinearity, which affects model interpretation and feature selection.
+
+### Model Building- Logistic Regression
+
+Coefficients
+
+1. Intercept: 1.7752
+
+2. Age: -0.2477 (p = 0.368)
+
+3. Gender1: 0.2093 (p = 0.676)
+
+4. BloodPressure: -0.1250 (p = 0.595)
+
+5. Cholesterol: 0.1128 (p = 0.679)
+
+6. HeartRate: -0.2070 (p = 0.397)
+
+7. QuantumPatternFeature: -7.6702 (p < 0.001)
+
+### Interpretation:
+
+The QuantumPatternFeature is highly significant (p < 0.001), indicating a strong relationship with heart disease.
+
+Other variables such as Age, Gender, BloodPressure, Cholesterol, and HeartRate are not statistically significant in this model (p > 0.05).
+
+### Model Evaluation (Confusion Matrix)
+
+Accuracy: 93.33%
+
+Sensitivity: 96.67%
+
+Specificity: 91.11%
+
+
+# Results Interpretation
+
+## Demographic and Health Indicators
+
+A slightly right-skewed distribution suggests more middle-aged and older individuals, which aligns with typical heart disease demographics. Blood Pressure/Bimodal distribution could indicate a mix of individuals with normal and high blood pressure, requiring further stratified analysis.Right-skewness suggests a need for targeted cholesterol management strategies. Normal distribution suggests heart rates are generally within expected ranges. Quantum Pattern Feature/ Multimodal distribution suggests subgroups requiring further investigation to understand patterns related to heart disease.
+
+#### Gender and Heart Disease Distribution
+
+Knowing the proportions of males and females helps understand potential gender-specific risk factors. Heart Disease Distribution Indicates overall disease burden, useful for resource allocation and public health planning.
+
+#### Relationships Between Variables and Heart Disease
+
+Color-coding aids in visualizing relationships between variables and heart disease in correlation matrix, highlights potential risk factors.Correlation Matrix helps identify multicollinearity, informing model adjustments for more accurate predictions.
+
+## Model Performance
+The logistic regression model shows high accuracy (93.33%), sensitivity (96.67%), and specificity (91.11%), demonstrating strong predictive capability. The highly significant QuantumPatternFeature suggests it is a crucial predictor of heart disease within this model.
+
+## Implications
+For Academia- Validate QuantumPatternFeature in other datasets, explore interactions, and test other models like Random Forests or Neural Networks.
+
+For Industry- Develop diagnostic tools incorporating the QuantumPatternFeature, and create personalized health monitoring devices.
+
+For Policy Makers- Implement targeted interventions for high-risk groups identified by the model, focusing on QuantumPatternFeature and traditional risk factors.
+
+## Caveats
+The model is based on a specific dataset and may not generalize to other populations.
+
+Some features might be correlated, affecting coefficient interpretation.Some variables lack statistical significance (p > 0.05), requiring cautious interpretation.
